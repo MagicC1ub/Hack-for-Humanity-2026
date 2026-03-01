@@ -3,35 +3,31 @@
 <head>
     <title>Admin Dashboard</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #1e1e1e; color: white; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        body { font-family: -apple-system, sans-serif; background: #F4F6F9; color: #333; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Layout */
-        .sidebar { width: 250px; background: #2a2a2a; padding: 20px; border-right: 1px solid #444; overflow-y: auto; }
+        .sidebar { width: 250px; background: #ffffff; padding: 20px; border-right: 1px solid #ddd; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
         .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
         
-        /* UI Elements */
-        h1, h2, h3 { color: #f44336; margin-top: 0; }
+        h1, h2, h3 { color: #002F6C; margin-top: 0; }
         .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold;}
-        .btn-blue { background: #2196F3; }
-        .btn-green { background: #4CAF50; }
-        .btn-red { background: #f44336; }
-        .btn-outline { background: transparent; border: 1px solid #aaa; color: #aaa; }
-        .btn-outline:hover { background: #333; color: white;}
+        .btn-blue { background: #009BDF; }
+        .btn-green { background: #002F6C; }
+        .btn-red { background: #D32F2F; }
+        .btn-outline { background: transparent; border: 1px solid #002F6C; color: #002F6C; }
+        .btn-outline:hover { background: #002F6C; color: white;}
         
-        /* Lists & Badges */
-        .user-item { padding: 10px; border-bottom: 1px solid #444; cursor: pointer; transition: 0.2s;}
-        .user-item:hover, .user-item.active { background: #3a3a3a; color: #2196F3; border-left: 4px solid #2196F3; }
+        .user-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; color: #333; font-weight: 500;}
+        .user-item:hover, .user-item.active { background: #f0f7fb; color: #002F6C; border-left: 4px solid #009BDF; }
         
         .badge-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;}
-        .minimized-badge { background: #333; padding: 10px 15px; border-radius: 6px; cursor: pointer; border-left: 4px solid #4CAF50; width: 220px;}
-        .minimized-badge:hover { background: #444; }
-        .badge-title { font-weight: bold; font-size: 1.1em; display: block; margin-bottom: 4px;}
-        .badge-meta { color: #aaa; font-size: 0.8em; }
+        .minimized-badge { background: #ffffff; padding: 10px 15px; border-radius: 6px; cursor: pointer; width: 220px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #eee; border-left: 4px solid #009BDF;}
+        .minimized-badge:hover { background: #f9f9f9; }
+        .badge-title { font-weight: bold; font-size: 1.1em; display: block; margin-bottom: 4px; color: #002F6C;}
+        .badge-meta { color: #666; font-size: 0.8em; }
         
-        /* Modals */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
-        .modal-content { background: #2a2a2a; padding: 20px; border-radius: 8px; width: 400px; }
-        .modal input, .modal select { width: 95%; padding: 8px; margin: 10px 0; border-radius: 4px; border: none; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 47, 108, 0.6); align-items: center; justify-content: center; }
+        .modal-content { background: #ffffff; padding: 20px; border-radius: 8px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-top: 5px solid #009BDF;}
+        .modal input, .modal select { width: 95%; padding: 8px; margin: 10px 0; border-radius: 4px; border: 1px solid #ccc; background: #fafafa; color: #333; }
         .modal-actions { display: flex; justify-content: space-between; margin-top: 20px; }
     </style>
 </head>

@@ -3,31 +3,22 @@
 <head>
     <title>Transit Passport</title>
     <style>
-        .logout-btn { background: transparent; color: #aaa; text-decoration: none; font-size: 0.8em; border: 1px solid #aaa; padding: 5px 10px; border-radius: 4px; margin-left: 15px; cursor: pointer;}
-        .logout-btn:hover { background: #333; color: white; }
-        body { font-family: -apple-system, sans-serif; background: #2a2a2a; color: white; padding: 20px; max-width: 800px; margin: 0 auto;}
+        body { font-family: -apple-system, sans-serif; background: #F4F6F9; color: #333; padding: 20px; max-width: 800px; margin: 0 auto;}
+        h1, h2 { color: #002F6C; }
+        .logout-btn { background: transparent; color: #002F6C; text-decoration: none; font-size: 0.8em; border: 1px solid #002F6C; padding: 5px 10px; border-radius: 4px; margin-left: 15px; cursor: pointer; font-weight: bold;}
+        .logout-btn:hover { background: #002F6C; color: white; }
         .header-controls { display: flex; justify-content: space-between; align-items: center; }
-        button { padding: 8px 16px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; } 
-        .badge { background: #3a3a3a; padding: 15px; margin: 10px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;}
-        .badge-info h3 { margin: 0 0 5px 0; }
-        .badge-info p { margin: 0; color: #aaa; font-size: 0.9em; }
-        .badge-rank { font-weight: bold; color: #4CAF50; margin-top: 5px; display: inline-block;}
-        .inactive-badge { opacity: 0.5; filter: grayscale(100%); border-left: 4px solid #f44336; }
+        button { padding: 8px 16px; cursor: pointer; background: #009BDF; color: white; border: none; border-radius: 4px; font-weight: bold; } 
+        button:hover { opacity: 0.9; }
         
-        /* The Steam-Style Rarity Bar */
+        .badge { background: #ffffff; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #009BDF;}
+        .badge-info h3 { margin: 0 0 5px 0; color: #002F6C; }
+        .badge-info p { margin: 0; color: #555; font-size: 0.9em; }
+        .badge-rank { font-weight: bold; color: #009BDF; margin-top: 5px; display: inline-block;}
+        .inactive-badge { opacity: 0.6; filter: grayscale(100%); border-left: 5px solid #999; }
+        
         .rarity-container { width: 200px; text-align: right; }
-        .rarity-bar { 
-            height: 24px; 
-            border-radius: 3px; 
-            margin-top: 5px;
-            color: black;
-            font-size: 0.8em;
-            line-height: 24px;
-            text-align: left;
-            padding-left: 8px;
-            font-weight: bold;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
-        }
+        .rarity-bar { height: 20px; border-radius: 10px; text-align: right; padding-right: 10px; line-height: 20px; font-size: 0.8em; font-weight: bold; color: #333; border: 1px solid #ddd; }
 
         /* Minimized State Styles */
         #badge-container.minimized { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -93,29 +84,32 @@
 
                     let actionButton = '';
                     let progressHtml = '';
-                    let titleColor = 'white'; // Default color
+                    let titleColor = '#002F6C'; // VTA Navy Blue
                     
                     if (badge.type === 'upgradable') {
-                        actionButton = `<button onclick="logTrip('${badge.id}')" style="margin-top: 10px; background: #2196F3; border: none; padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer;">+ Simulate Trip</button>`;
-                        progressHtml = `<p style="color: #ffb300; font-weight: bold; margin-top: 5px; font-size: 0.9em;">${badge.progress_text}</p>`;
+                        actionButton = `<button onclick="logTrip('${badge.id}')" style="margin-top: 10px; background: #009BDF; border: none; padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer; font-weight: bold;">+ Simulate Trip</button>`;
                         
-                        // Set the color based on the rank!
-                        if (badge.rank === 'Wood') titleColor = '#CD853F';       // Wood/Peru brown
-                        else if (badge.rank === 'Bronze') titleColor = '#CD7F32'; // Bronze
-                        else if (badge.rank === 'Silver') titleColor = '#C0C0C0'; // Silver
-                        else if (badge.rank === 'Gold') titleColor = '#FFD700';   // Gold
+                        // Set the titleColor based on rank (Keep your existing Bronze/Silver/Gold logic here!)
+                        if (badge.rank === 'Wood') titleColor = '#CD853F';       
+                        else if (badge.rank === 'Bronze') titleColor = '#CD7F32'; 
+                        else if (badge.rank === 'Silver') titleColor = '#888888'; // Darkened silver for light mode
+                        else if (badge.rank === 'Gold') titleColor = '#DAA520';   // Darkened gold for light mode
+                        
+                        progressHtml = `<p style="color: ${titleColor}; font-weight: bold; margin-top: 5px; font-size: 0.9em;">${badge.progress_text}</p>`;
                         
                     } else if (badge.type === 'temporary') {
-                        progressHtml = `<p style="color: #4CAF50; font-weight: bold; margin-top: 5px; font-size: 0.9em;">${badge.progress_text}</p>`;
+                        // Change temporary progress text to VTA Light Blue
+                        progressHtml = `<p style="color: #009BDF; font-weight: bold; margin-top: 5px; font-size: 0.9em;">${badge.progress_text}</p>`;
                     }
 
-                    const barStyle = `background: linear-gradient(to right, white ${badge.rarity}%, #555 ${badge.rarity}%);`;
+                    // Reverse the rarity bar colors for light mode (Blue fills the percentage, light gray is the empty space)
+                    const barStyle = `background: linear-gradient(to right, #009BDF ${badge.rarity}%, #e0e0e0 ${badge.rarity}%); color: ${badge.rarity > 50 ? 'white' : '#333'};`;
                     const activeClass = badge.rank === 'Inactive' ? 'inactive-badge' : '';
 
                     container.innerHTML += `
                         <div class="badge ${activeClass}">
                             <div class="badge-info">
-                                <h3 style="color: ${titleColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">${badge.name}</h3>
+                                <h3 style="color: ${titleColor};">${badge.name}</h3>
                                 <p>${badge.description}</p>
                                 <span class="badge-rank" style="color: ${titleColor}; font-weight: bold;">Rank: ${badge.rank}</span>
                                 ${progressHtml}
