@@ -3,6 +3,8 @@
 <head>
     <title>Transit Passport</title>
     <style>
+        .logout-btn { background: transparent; color: #aaa; text-decoration: none; font-size: 0.8em; border: 1px solid #aaa; padding: 5px 10px; border-radius: 4px; margin-left: 15px; cursor: pointer;}
+        .logout-btn:hover { background: #333; color: white; }
         body { font-family: -apple-system, sans-serif; background: #2a2a2a; color: white; padding: 20px; max-width: 800px; margin: 0 auto;}
         .header-controls { display: flex; justify-content: space-between; align-items: center; }
         button { padding: 8px 16px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; } 
@@ -39,7 +41,10 @@
 </head>
 <body>
     <div class="header-controls">
-        <h1>My Transit Passport</h1>
+        <div style="display: flex; align-items: center;">
+            <h1>My Transit Passport</h1>
+            <button onclick="logout()" class="logout-btn">Log Out &larr;</button>
+        </div>
         <button onclick="toggleView()">Toggle Compact View</button>
         <button onclick="simulateTime()" style="background: #f44336;">Simulate 1 Week Pass</button>
         <button onclick="swipeCard()" style="background: #2196F3; font-size: 1.1em; padding: 10px 20px;">Log New Transit Trip</button>
@@ -48,52 +53,38 @@
     <div id="badge-container">Loading...</div>
 
     <script>
-        function swipeCard() {
-            fetch('/api/swipe_card', { method: 'POST' })
-                .then(() => location.reload());
+        function logout() {
+            localStorage.removeItem('transit_user_id'); 
+            window.location.href = '/'; // Sends them back to the main portal
+        }
+
+        // 1. Security Check: Kick them to login if no ID is saved
+        const userId = localStorage.getItem('transit_user_id');
+        if (!userId) {
+            window.location.href = '/commuter_login';
         }
 
         function toggleView() {
             document.getElementById('badge-container').classList.toggle('minimized');
         }
 
-        function simulateTime() {
-            fetch('/api/simulate_time', { method: 'POST' })
-                .then(() => location.reload());
-        }
-
-        function logTrip(badgeId) {
-            fetch('/api/log_trip', { 
-                method: 'POST',
-                headers: {
-                    // This tells the C++ server to look in the body for the data
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                // Here is where we actually pack the ID into the request body
-                body: `id=${badgeId}`
-            })
-            .then(() => location.reload()); // Reload the page to see the new stats!
-        }
-
-        fetch('/api/badges')
+        // 2. Fetch badges for THIS specific user
+        fetch(`/api/badges?user_id=${userId}`)
             .then(response => response.json())
             .then(data => {
-                // Sorting Logic: Type First, then Rarity
                 const typeOrder = { 'temporary': 1, 'upgradable': 2, 'one_and_done': 3 };
                 data.sort((a, b) => {
                     if (typeOrder[a.type] !== typeOrder[b.type]) {
                         return typeOrder[a.type] - typeOrder[b.type];
                     }
-                    return a.rarity - b.rarity; // Sort by global percentage within the category
+                    return a.rarity - b.rarity;
                 });
                 
                 const container = document.getElementById('badge-container');
                 container.innerHTML = '';
-                
                 let currentType = '';
 
                 data.forEach(badge => {
-                    // Add Category Headers
                     if (badge.type !== currentType) {
                         const typeTitle = badge.type.replace(/_/g, ' ').toUpperCase();
                         container.innerHTML += `<h2>${typeTitle}</h2>`;
@@ -102,23 +93,31 @@
 
                     let actionButton = '';
                     let progressHtml = '';
+                    let titleColor = 'white'; // Default color
                     
                     if (badge.type === 'upgradable') {
-                        actionButton = `<button onclick="logTrip('${badge.id}')" style="margin-top: 10px; background: #2196F3;">+ Simulate Trip</button>`;
-                        progressHtml = `<p style="color: #ffb300; font-weight: bold; margin-top: 5px;">${badge.progress_text}</p>`;
+                        actionButton = `<button onclick="logTrip('${badge.id}')" style="margin-top: 10px; background: #2196F3; border: none; padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer;">+ Simulate Trip</button>`;
+                        progressHtml = `<p style="color: #ffb300; font-weight: bold; margin-top: 5px; font-size: 0.9em;">${badge.progress_text}</p>`;
+                        
+                        // Set the color based on the rank!
+                        if (badge.rank === 'Wood') titleColor = '#CD853F';       // Wood/Peru brown
+                        else if (badge.rank === 'Bronze') titleColor = '#CD7F32'; // Bronze
+                        else if (badge.rank === 'Silver') titleColor = '#C0C0C0'; // Silver
+                        else if (badge.rank === 'Gold') titleColor = '#FFD700';   // Gold
+                        
+                    } else if (badge.type === 'temporary') {
+                        progressHtml = `<p style="color: #4CAF50; font-weight: bold; margin-top: 5px; font-size: 0.9em;">${badge.progress_text}</p>`;
                     }
 
                     const barStyle = `background: linear-gradient(to right, white ${badge.rarity}%, #555 ${badge.rarity}%);`;
-                    
-                    // Visually dim the badge if it has decayed
                     const activeClass = badge.rank === 'Inactive' ? 'inactive-badge' : '';
 
                     container.innerHTML += `
                         <div class="badge ${activeClass}">
                             <div class="badge-info">
-                                <h3>${badge.name}</h3>
+                                <h3 style="color: ${titleColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">${badge.name}</h3>
                                 <p>${badge.description}</p>
-                                <span class="badge-rank">Rank: ${badge.rank}</span>
+                                <span class="badge-rank" style="color: ${titleColor}; font-weight: bold;">Rank: ${badge.rank}</span>
                                 ${progressHtml}
                                 <br>
                                 ${actionButton}
@@ -130,6 +129,34 @@
                     `;
                 });
             });
+
+        // 3. Update all POST requests to include the user_id in the body
+        function logTrip(badgeId) {
+            fetch('/api/log_trip', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `id=${badgeId}&user_id=${userId}`
+            })
+            .then(() => location.reload());
+        }
+
+        function swipeCard() {
+            fetch('/api/swipe_card', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `user_id=${userId}`
+            })
+            .then(() => location.reload());
+        }
+
+        function simulateTime() {
+            fetch('/api/simulate_time', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `user_id=${userId}`
+            })
+            .then(() => location.reload());
+        }
     </script>
 </body>
 </html>

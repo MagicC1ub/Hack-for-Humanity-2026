@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Commuter Login</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #2a2a2a; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .login-box { background: #3a3a3a; padding: 40px; border-radius: 8px; text-align: center; width: 300px;}
+        input { padding: 10px; font-size: 1.1em; width: 90%; margin-bottom: 15px; border-radius: 4px; border: none; }
+        button { padding: 10px; width: 100%; font-size: 1.1em; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 10px;}
+        .btn-register { background: #4CAF50; }
+        #msg { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>Commuter Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        
+        <button onclick="authenticate('/api/commuter_login')">Login</button>
+        <button class="btn-register" onclick="authenticate('/api/register')">Create Account</button>
+        <p id="msg"></p>
+    </div>
+
+    <script>
+        function authenticate(endpoint) {
+            // .trim() removes any accidental leading or trailing spaces
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            
+            // 1. Input Validation: Check if either field is empty
+            if (user.length === 0 || pass.length === 0) {
+                document.getElementById('msg').innerText = "Username and password cannot be empty.";
+                document.getElementById('msg').style.color = "#f44336";
+                return; // Stop the function here so it doesn't send a request to the server
+            }
+            
+            // 2. Proceed with the fetch request if validation passes
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    localStorage.setItem('transit_user_id', data.user_id); 
+                    window.location.href = '/commuter';
+                } else {
+                    document.getElementById('msg').innerText = data.error || "Login Failed.";
+                    document.getElementById('msg').style.color = "#f44336";
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -3,61 +3,282 @@
 <head>
     <title>Admin Dashboard</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #1e1e1e; color: white; padding: 30px; max-width: 900px; margin: 0 auto; }
-        h1 { color: #f44336; border-bottom: 2px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
-        .logout-btn { background: transparent; color: #aaa; text-decoration: none; font-size: 0.5em; border: 1px solid #aaa; padding: 5px 10px; border-radius: 4px; }
-        .logout-btn:hover { background: #333; color: white; }
+        body { font-family: -apple-system, sans-serif; background: #1e1e1e; color: white; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #2a2a2a; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #444; }
-        th { background: #333; color: #4CAF50; font-weight: bold; }
-        tr:hover { background: #3a3a3a; }
+        /* Layout */
+        .sidebar { width: 250px; background: #2a2a2a; padding: 20px; border-right: 1px solid #444; overflow-y: auto; }
+        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
         
-        .role-admin { color: #f44336; font-weight: bold; }
-        .role-user { color: #2196F3; font-weight: bold; }
+        /* UI Elements */
+        h1, h2, h3 { color: #f44336; margin-top: 0; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold;}
+        .btn-blue { background: #2196F3; }
+        .btn-green { background: #4CAF50; }
+        .btn-red { background: #f44336; }
+        .btn-outline { background: transparent; border: 1px solid #aaa; color: #aaa; }
+        .btn-outline:hover { background: #333; color: white;}
+        
+        /* Lists & Badges */
+        .user-item { padding: 10px; border-bottom: 1px solid #444; cursor: pointer; transition: 0.2s;}
+        .user-item:hover, .user-item.active { background: #3a3a3a; color: #2196F3; border-left: 4px solid #2196F3; }
+        
+        .badge-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;}
+        .minimized-badge { background: #333; padding: 10px 15px; border-radius: 6px; cursor: pointer; border-left: 4px solid #4CAF50; width: 220px;}
+        .minimized-badge:hover { background: #444; }
+        .badge-title { font-weight: bold; font-size: 1.1em; display: block; margin-bottom: 4px;}
+        .badge-meta { color: #aaa; font-size: 0.8em; }
+        
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
+        .modal-content { background: #2a2a2a; padding: 20px; border-radius: 8px; width: 400px; }
+        .modal input, .modal select { width: 95%; padding: 8px; margin: 10px 0; border-radius: 4px; border: none; }
+        .modal-actions { display: flex; justify-content: space-between; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>
-        <span>Transit Authority Admin Portal</span>
-        <a href="/" class="logout-btn">Log Out &larr;</a>
-    </h1>
     
-    <h2>Registered Commuters</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Username</th>
-                <th>Account Role</th>
-            </tr>
-        </thead>
-        <tbody id="user-table-body">
-            <tr><td colspan="3">Loading secure user data...</td></tr>
-        </tbody>
-    </table>
+    <div class="sidebar">
+        <h2 style="font-size: 1.2em; border-bottom: 1px solid #444; padding-bottom: 10px;">
+             Admin Portal
+            <a href="/" class="btn btn-outline" style="float:right; text-decoration:none; font-size: 0.7em;">Exit</a>
+        </h2>
+        
+        <button class="btn btn-blue" style="width: 100%; margin-bottom: 20px;" onclick="loadGlobalBadges()"> Global Stockpile</button>
+        
+        <h3 style="color: #aaa; font-size: 0.9em;">COMMUTERS</h3>
+        <div id="user-list">Loading...</div>
+    </div>
+
+    <div class="main-content" id="main-content">
+        <h1 style="color: #555;">Select a system to manage.</h1>
+    </div>
+
+    <div id="globalModal" class="modal">
+        <div class="modal-content">
+            <h2 id="gModalTitle">Add Global Badge</h2>
+            <input type="text" id="gBadgeId" placeholder="Badge ID (e.g., golden_gate)">
+            <input type="text" id="gBadgeName" placeholder="Badge Name">
+            <input type="text" id="gBadgeDesc" placeholder="Description">
+            <select id="gBadgeType">
+                <option value="one_and_done">One and Done</option>
+                <option value="temporary">Temporary</option>
+                <option value="upgradable">Upgradable</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModals()">Cancel</button>
+                <button class="btn btn-red" id="gBtnDelete" onclick="deleteGlobalBadge()">Delete</button>
+                <button class="btn btn-green" onclick="saveGlobalBadge()">Save Badge</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="userBadgeModal" class="modal">
+        <div class="modal-content">
+            <h2 id="uModalTitle">Manage User Badge</h2>
+            
+            <div id="uAddSection" style="display:none;">
+                <p>Select a badge to give :</p>
+                <select id="uBadgeSelect"></select>
+                <button class="btn btn-blue" style="width:100%; margin-top:10px;" onclick="giveUserBadge()">Give Badge</button>
+            </div>
+
+            <div id="uEditSection" style="display:none;">
+                <p id="uBadgeNameDisplay" style="font-weight:bold;"></p>
+                <div id="uCountSection">
+                    <label>Earned Count (Upgradable Only):</label>
+                    <input type="number" id="uBadgeCount">
+                    <button class="btn btn-blue" style="width:100%; margin-bottom:10px;" onclick="updateUserBadgeCount()">Save Count</button>
+                </div>
+                <button class="btn btn-red" style="width:100%;" onclick="removeUserBadge()">Remove Badge From User</button>
+            </div>
+            
+            <button class="btn btn-outline" style="width:100%; margin-top:20px;" onclick="closeModals()">Close</button>
+        </div>
+    </div>
 
     <script>
-        // Fetch the user data from the C++ backend as soon as the page loads
-        fetch('/api/admin/users')
-            .then(response => response.json())
-            .then(users => {
-                const tableBody = document.getElementById('user-table-body');
-                tableBody.innerHTML = ''; // Clear the loading text
-                
-                users.forEach(user => {
-                    // Apply different styling based on their role
-                    const roleClass = user.role === 'admin' ? 'role-admin' : 'role-user';
-                    
-                    tableBody.innerHTML += `
-                        <tr>
-                            <td>#${user.id.toString().padStart(4, '0')}</td>
-                            <td>${user.username}</td>
-                            <td class="${roleClass}">${user.role.toUpperCase()}</td>
-                        </tr>
-                    `;
-                });
+        let currentUserId = null;
+        let globalBadgesCache = [];
+        let currentEditingBadgeId = null;
+
+        // Initialize Application
+        fetch('/api/admin/users').then(res => res.json()).then(users => {
+            const list = document.getElementById('user-list');
+            list.innerHTML = '';
+            users.forEach(u => {
+                list.innerHTML += `<div class="user-item" onclick="loadUserBadges(${u.id}, '${u.username}')"> ${u.username}</div>`;
             });
+        });
+
+        fetch('/api/admin/global_badges').then(res => res.json()).then(b => globalBadgesCache = b);
+
+        // --- GLOBAL BADGE VIEWS & ACTIONS ---
+        function loadGlobalBadges() {
+            currentUserId = null;
+            let html = `<h1> Global Badge Stockpile</h1>
+                        <button class="btn btn-green" onclick="openGlobalModal()">+ Add New Badge</button>
+                        <div class="badge-grid">`;
+            
+            globalBadgesCache.forEach(b => {
+                const category = b.type.replace(/_/g, ' ').toUpperCase();
+                html += `
+                    <div class="minimized-badge" onclick='openGlobalModal(${JSON.stringify(b)})'>
+                        <span class="badge-title">${b.name}</span>
+                        <span class="badge-meta">Category: ${category}</span>
+                    </div>`;
+            });
+            html += `</div>`;
+            document.getElementById('main-content').innerHTML = html;
+        }
+
+        function openGlobalModal(badge = null) {
+            document.getElementById('globalModal').style.display = 'flex';
+            if (badge) {
+                document.getElementById('gModalTitle').innerText = 'Edit Global Badge';
+                document.getElementById('gBadgeId').value = badge.id;
+                document.getElementById('gBadgeId').disabled = true; // Can't change ID once created
+                document.getElementById('gBadgeName').value = badge.name;
+                document.getElementById('gBadgeDesc').value = badge.description;
+                document.getElementById('gBadgeType').value = badge.type;
+                document.getElementById('gBtnDelete').style.display = 'block';
+            } else {
+                document.getElementById('gModalTitle').innerText = 'Add Global Badge';
+                document.getElementById('gBadgeId').value = '';
+                document.getElementById('gBadgeId').disabled = false;
+                document.getElementById('gBadgeName').value = '';
+                document.getElementById('gBadgeDesc').value = '';
+                document.getElementById('gBtnDelete').style.display = 'none';
+            }
+        }
+
+        function saveGlobalBadge() {
+            const id = document.getElementById('gBadgeId').value;
+            const name = document.getElementById('gBadgeName').value;
+            const desc = document.getElementById('gBadgeDesc').value;
+            const type = document.getElementById('gBadgeType').value;
+
+            fetch('/api/admin/save_global_badge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `id=${id}&name=${name}&desc=${desc}&type=${type}`
+            }).then(() => location.reload()); 
+        }
+
+        function deleteGlobalBadge() {
+            const id = document.getElementById('gBadgeId').value;
+            if (confirm(`Are you absolutely sure you want to delete ${id}? This will remove it from all users!`)) {
+                fetch('/api/admin/delete_global_badge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `id=${id}`
+                }).then(() => location.reload());
+            }
+        }
+
+        // --- USER BADGE VIEWS & ACTIONS ---
+        function loadUserBadges(userId, username) {
+            currentUserId = userId;
+            fetch(`/api/badges?user_id=${userId}`).then(res => res.json()).then(badges => {
+                let html = `<h1> User: ${username}</h1>
+                            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                                <button class="btn btn-blue" onclick="openGiveBadgeModal()">+ Give Badge to User</button>
+                                <button class="btn btn-red" onclick="removeUser('${username}')"> Remove User</button>
+                            </div>
+                            <div class="badge-grid">`;
+                
+                badges.forEach(b => {
+                    const countDisplay = b.type === 'upgradable' ? `| Count: ${b.earned_count}` : '';
+                    html += `
+                        <div class="minimized-badge" onclick='openEditUserBadgeModal(${JSON.stringify(b)})'>
+                            <span class="badge-title">${b.name}</span>
+                            <span class="badge-meta">${b.rank} ${countDisplay}</span>
+                        </div>`;
+                });
+                html += `</div>`;
+                document.getElementById('main-content').innerHTML = html;
+            });
+        }
+
+        function openGiveBadgeModal() {
+            document.getElementById('userBadgeModal').style.display = 'flex';
+            document.getElementById('uModalTitle').innerText = 'Give Badge';
+            document.getElementById('uAddSection').style.display = 'block';
+            document.getElementById('uEditSection').style.display = 'none';
+
+            // Populate alphabetical dropdown
+            const select = document.getElementById('uBadgeSelect');
+            select.innerHTML = '';
+            const sorted = [...globalBadgesCache].sort((a,b) => a.name.localeCompare(b.name));
+            sorted.forEach(b => {
+                select.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+            });
+        }
+
+        function openEditUserBadgeModal(badge) {
+            currentEditingBadgeId = badge.id;
+            document.getElementById('userBadgeModal').style.display = 'flex';
+            document.getElementById('uModalTitle').innerText = 'Edit User Badge';
+            document.getElementById('uAddSection').style.display = 'none';
+            document.getElementById('uEditSection').style.display = 'block';
+            
+            document.getElementById('uBadgeNameDisplay').innerText = badge.name;
+            
+            if (badge.type === 'upgradable') {
+                document.getElementById('uCountSection').style.display = 'block';
+                document.getElementById('uBadgeCount').value = badge.earned_count;
+            } else {
+                document.getElementById('uCountSection').style.display = 'none';
+            }
+        }
+
+        function giveUserBadge() {
+            const badgeId = document.getElementById('uBadgeSelect').value;
+            fetch('/api/admin/give_badge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `user_id=${currentUserId}&badge_id=${badgeId}`
+            }).then(() => { closeModals(); loadUserBadges(currentUserId, 'Reloading...'); });
+        }
+
+        function removeUserBadge() {
+            fetch('/api/admin/remove_badge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `user_id=${currentUserId}&badge_id=${currentEditingBadgeId}`
+            }).then(() => { closeModals(); loadUserBadges(currentUserId, 'Reloading...'); });
+        }
+
+        function updateUserBadgeCount() {
+            const count = document.getElementById('uBadgeCount').value;
+            fetch('/api/admin/update_count', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `user_id=${currentUserId}&badge_id=${currentEditingBadgeId}&count=${count}`
+            }).then(() => { closeModals(); loadUserBadges(currentUserId, 'Reloading...'); });
+        }
+
+        function closeModals() {
+            document.getElementById('globalModal').style.display = 'none';
+            document.getElementById('userBadgeModal').style.display = 'none';
+        }
+
+        function removeUser(username) {
+            // First check
+            if (confirm(`WARNING: Are you sure you want to completely delete ${username} from the system?`)) {
+                // Second check
+                if (confirm(`FINAL CHECK: This will permanently erase all of ${username}'s badges and their account. This CANNOT be undone. Proceed?`)) {
+                    
+                    // If they passed both checks, nuke the account
+                    fetch('/api/admin/remove_user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `user_id=${currentUserId}`
+                    }).then(() => {
+                        location.reload(); // Reload the whole page to update the sidebar list!
+                    });
+                }
+            }
+        }
     </script>
 </body>
 </html>
