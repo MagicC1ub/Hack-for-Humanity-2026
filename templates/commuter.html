@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transit Passport</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #2a2a2a; color: white; padding: 20px; max-width: 800px; margin: 0 auto;}
+        .header-controls { display: flex; justify-content: space-between; align-items: center; }
+        button { padding: 8px 16px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; } 
+        .badge { background: #3a3a3a; padding: 15px; margin: 10px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;}
+        .badge-info h3 { margin: 0 0 5px 0; }
+        .badge-info p { margin: 0; color: #aaa; font-size: 0.9em; }
+        .badge-rank { font-weight: bold; color: #4CAF50; margin-top: 5px; display: inline-block;}
+        .inactive-badge { opacity: 0.5; filter: grayscale(100%); border-left: 4px solid #f44336; }
+        
+        /* The Steam-Style Rarity Bar */
+        .rarity-container { width: 200px; text-align: right; }
+        .rarity-bar { 
+            height: 24px; 
+            border-radius: 3px; 
+            margin-top: 5px;
+            color: black;
+            font-size: 0.8em;
+            line-height: 24px;
+            text-align: left;
+            padding-left: 8px;
+            font-weight: bold;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        /* Minimized State Styles */
+        #badge-container.minimized { display: flex; flex-wrap: wrap; gap: 10px; }
+        #badge-container.minimized .badge { width: auto; padding: 8px 12px; }
+        #badge-container.minimized .badge-info p, 
+        #badge-container.minimized .badge-rank, 
+        #badge-container.minimized .rarity-container,
+        #badge-container.minimized h2 { display: none; }
+        #badge-container.minimized h3 { font-size: 1em; margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="header-controls">
+        <h1>My Transit Passport</h1>
+        <button onclick="toggleView()">Toggle Compact View</button>
+        <button onclick="simulateTime()" style="background: #f44336;">Simulate 1 Week Pass</button>
+        <button onclick="swipeCard()" style="background: #2196F3; font-size: 1.1em; padding: 10px 20px;">Log New Transit Trip</button>
+    </div>
+    
+    <div id="badge-container">Loading...</div>
+
+    <script>
+        function swipeCard() {
+            fetch('/api/swipe_card', { method: 'POST' })
+                .then(() => location.reload());
+        }
+
+        function toggleView() {
+            document.getElementById('badge-container').classList.toggle('minimized');
+        }
+
+        function simulateTime() {
+            fetch('/api/simulate_time', { method: 'POST' })
+                .then(() => location.reload());
+        }
+
+        function logTrip(badgeId) {
+            fetch('/api/log_trip', { 
+                method: 'POST',
+                headers: {
+                    // This tells the C++ server to look in the body for the data
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                // Here is where we actually pack the ID into the request body
+                body: `id=${badgeId}`
+            })
+            .then(() => location.reload()); // Reload the page to see the new stats!
+        }
+
+        fetch('/api/badges')
+            .then(response => response.json())
+            .then(data => {
+                // Sorting Logic: Type First, then Rarity
+                const typeOrder = { 'temporary': 1, 'upgradable': 2, 'one_and_done': 3 };
+                data.sort((a, b) => {
+                    if (typeOrder[a.type] !== typeOrder[b.type]) {
+                        return typeOrder[a.type] - typeOrder[b.type];
+                    }
+                    return a.rarity - b.rarity; // Sort by global percentage within the category
+                });
+                
+                const container = document.getElementById('badge-container');
+                container.innerHTML = '';
+                
+                let currentType = '';
+
+                data.forEach(badge => {
+                    // Add Category Headers
+                    if (badge.type !== currentType) {
+                        const typeTitle = badge.type.replace(/_/g, ' ').toUpperCase();
+                        container.innerHTML += `<h2>${typeTitle}</h2>`;
+                        currentType = badge.type;
+                    }
+
+                    let actionButton = '';
+                    let progressHtml = '';
+                    
+                    if (badge.type === 'upgradable') {
+                        actionButton = `<button onclick="logTrip('${badge.id}')" style="margin-top: 10px; background: #2196F3;">+ Simulate Trip</button>`;
+                        progressHtml = `<p style="color: #ffb300; font-weight: bold; margin-top: 5px;">${badge.progress_text}</p>`;
+                    }
+
+                    const barStyle = `background: linear-gradient(to right, white ${badge.rarity}%, #555 ${badge.rarity}%);`;
+                    
+                    // Visually dim the badge if it has decayed
+                    const activeClass = badge.rank === 'Inactive' ? 'inactive-badge' : '';
+
+                    container.innerHTML += `
+                        <div class="badge ${activeClass}">
+                            <div class="badge-info">
+                                <h3>${badge.name}</h3>
+                                <p>${badge.description}</p>
+                                <span class="badge-rank">Rank: ${badge.rank}</span>
+                                ${progressHtml}
+                                <br>
+                                ${actionButton}
+                            </div>
+                            <div class="rarity-container">
+                                <div class="rarity-bar" style="${barStyle}">${badge.rarity.toFixed(1)}%</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+    </script>
+</body>
+</html>
